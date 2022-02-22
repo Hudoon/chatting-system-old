@@ -12,6 +12,10 @@ var stompClient = null;
 var currentSubscription;
 var topic = null;
 var username;
+var chatUsersCount = document.querySelector("#chatUsersCount");
+let chatUsersCtr = document.querySelector("#users");
+
+let users = [];
 
 function connect(event) {
     var name1 = $("#name").val().trim();
@@ -22,36 +26,77 @@ function connect(event) {
     stompClient = Stomp.over(socket);
     stompClient.connect({}, onConnected, onError);
     event.preventDefault();
-}
 
+}
+function disconnect(event) {
+    //stompClient.disconnect({}, onDisconnect,onError())
+    onDisconnect();
+    console.log("Disconnected");
+
+}
 
 function onConnected() {
-  enterRoom(room.val());
-  waiting.classList.add('d-none');
+    enterRoom(room.val());
+    waiting.classList.add('d-none');
 
 }
 
+function onDisconnect() {
+    exitRoom(room.val());
+    waiting.classList.add('d-none');
+
+}
+
+function exitRoom(newRoomId)
+{
+    var roomId = newRoomId;
+
+    Cookies.set('roomId', room);
+
+    roomIdDisplay.textContent = roomId;
+    topic = `/chat-app/chat/${newRoomId}`;
+
+    currentSubscription = stompClient.subscribe(`/chat-room/${roomId}`, onMessageReceived);
+    var username = $("#name").val().trim();
+    stompClient.send(`${topic}/leaveUser`,
+        {},
+        JSON.stringify({sender: username, type: 'LEAVE'})
+    );
+    console.log('leave user');
+    stompClient.disconnect();
+
+}
 function onError(error) {
-  waiting.textContent = 'uh oh! service unavailable';
+    waiting.textContent = 'uh oh! service unavailable';
 }
 
 function enterRoom(newRoomId) {
-  var roomId = newRoomId;
-  Cookies.set('roomId', room);
-  roomIdDisplay.textContent = roomId;
-  topic = `/chat-app/chat/${newRoomId}`;
+    var roomId = newRoomId;
 
-  currentSubscription = stompClient.subscribe(`/chat-room/${roomId}`, onMessageReceived);
-  var username = $("#name").val().trim();
-  stompClient.send(`${topic}/addUser`,
-    {},
-    JSON.stringify({sender: username, type: 'JOIN'})
-  );
+    Cookies.set('roomId', room);
+
+    roomIdDisplay.textContent = roomId;
+    topic = `/chat-app/chat/${newRoomId}`;
+
+    currentSubscription = stompClient.subscribe(`/chat-room/${roomId}`, onMessageReceived);
+    var username = $("#name").val().trim();
+    stompClient.send(`${topic}/addUser`,
+        {},
+        JSON.stringify({sender: username, type: 'JOIN'})
+    );
+    console.log('adduser');
+
+    // console.log('hiiiiiiiiiiiiiiiiiii');
+    // stompClient.subscribe('/chat-room/users', function(response) {
+    //     console.log(response);
+    //     console.log(JSON.parse(response.body));
+    // });
+    // topic = `/chat-app/chat`;
+    // stompClient.send(`${topic}/user/${username}`, {}, JSON.stringify({}))
+
 }
 
-function onMessageReceived(payload) {
 
-}
 
 function sendMessage(event) {
     var messageContent = $("#message").val().trim();
@@ -71,8 +116,32 @@ function sendMessage(event) {
     event.preventDefault();
 }
 
+
+// Join user to chat
+function userJoin( username) {
+    const user ={ username};
+    chatUsersCount= chatUsersCount+1;
+    users.push(user);
+    chatUsersCtr.innerHTML = '';
+    console.log("all users"+users.length);
+    users.forEach((u) => {
+        console.log("all users"+u.username);
+
+        const userEl = document.createElement("div");
+        userEl.className = "chat-user";
+        userEl.innerHTML = u.username;
+        chatUsersCtr.appendChild(userEl);
+    });
+
+
+}
+
 function onMessageReceived(payload) {
     var message = JSON.parse(payload.body);
+    console.log(payload.body);
+    console.log("Message received ");
+
+
     var messageElement = document.createElement('li');
     var divCard = document.createElement('div');
     divCard.className = 'card';
@@ -80,43 +149,41 @@ function onMessageReceived(payload) {
     if(message.type === 'JOIN') {
         messageElement.classList.add('event-message');
         message.content = message.sender + ' joined!';
+        console.log("/////////////////////type join "+message.content);
+        userJoin(message.sender);
+
     } else if (message.type === 'LEAVE') {
         messageElement.classList.add('event-message');
         message.content = message.sender + ' left!';
-    } else {
+        console.log(message.sender + ' left!');
+        console.log("/////////////////////type leave"+message.content);
+        disconnect();
+    }
+    else {
         messageElement.classList.add('chat-message');
-
-        var avatarElement = document.createElement('i');
-        var avatarText = document.createTextNode(message.sender[0]);
-        avatarElement.appendChild(avatarText);
-
-        messageElement.appendChild(avatarElement);
-
         var usernameElement = document.createElement('span');
         var usernameText = document.createTextNode(message.sender);
         usernameElement.appendChild(usernameText);
         messageElement.appendChild(usernameElement);
 
-
-
-        var divCardBody = document.createElement('div');
-        divCardBody.className = 'card-body';
-
-        divCardBody.appendChild(messageElement);
-        divCard.appendChild(divCardBody);
     }
-
+    var divCardBody = document.createElement('div');
+    divCardBody.className = 'card-body';
+    divCardBody.appendChild(messageElement);
+    divCard.appendChild(divCardBody);
     var textElement = document.createElement('p');
     var messageText = document.createTextNode(message.content);
     textElement.appendChild(messageText);
-
     messageElement.appendChild(textElement);
     var messageArea = document.querySelector('#messageArea');
     messageArea.appendChild(divCard);
-    messageArea.scrollTop = messageArea.scrollHeight;
+    messageArea.scrollTop = messageArea.scrollHeight
+
+
 }
 
 $(document).ready(function() {
-  userJoinForm.addEventListener('submit', connect, true);
-  messagebox.addEventListener('submit', sendMessage, true);
+    userJoinForm.addEventListener('submit', connect, true);
+    messagebox.addEventListener('submit', sendMessage, true);
+    userLeaveForm.addEventListener('submit', disconnect, true);
 });
