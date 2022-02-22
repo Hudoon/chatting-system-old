@@ -2,6 +2,15 @@ package com.nulpointerexception.npechatroom;
 
 public class Message {
 
+    @Override
+    public String toString() {
+        return "Message{" +
+                "messageType=" + messageType +
+                ", content='" + content + '\'' +
+                ", sender='" + sender + '\'' +
+                '}';
+    }
+
     public enum MessageType {
         CHAT, JOIN, LEAVE
     }
