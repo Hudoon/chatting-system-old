@@ -1,7 +1,14 @@
-# npe-chatroom
+# chatroom System
+chatting system with the following features
 
-Visit https://nulpointerexception.com/2019/05/14/a-tutorial-on-implementing-a-chat-application-like-whatsapp-using-websocket-and-spring/ for complete guide.
+Create chat group
 
-Run it using:
-mvn package
-java -jar target/npe-chatroom-0.0.1-SNAPSHOT.jar
+Join to chat group
+
+Send message
+
+Display received messages
+
+Display the online clients in the group
+
+Realtime state (client joined, client left)
